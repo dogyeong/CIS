@@ -1,5 +1,5 @@
 # CIS
-Code Clone Detection In System Software
+Code Clone Detection In System Software\n
 소프트웨어 사이의 코드클론 검출 프로젝트
 
 # Usage
