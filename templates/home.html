@@ -1,0 +1,704 @@
+<!doctype html>
+<html lang= "ko" >
+<head>
+	
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+	<script src="../static/js/jquery.min.js"></script>
+	<!-- jQuery Modal -->
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-modal/0.9.1/jquery.modal.min.js"></script>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-modal/0.9.1/jquery.modal.min.css" />
+	<link href="../static/css/basic.css" rel="stylesheet">	
+	<script type="text/javascript" src="http://echarts.baidu.com/gallery/vendors/echarts/echarts.min.js"></script>
+	<title>CIS</title>
+</head>
+<body>
+	<header id="header">
+		<div class = "title">
+			<a class="logo_img" href="#"><img src="../static/images/logo.png" width="40"> </a>
+			<p class="logo_text">CIS</p>
+		</div>
+		<div id="menu_bar">
+			<a class="menu01" href="#"><span>CIS</span></a>
+			<a class="menu02" href="#"><span>프로젝트소개</span></a>
+			<a class="menu03" href="#"><span>람쥐썬더</span></a>
+		</div>
+	</header>
+	
+	<content id="contents">
+		<div class = "banner">
+			<div class="banner_l">
+				<a class="banner_text">Code Clone Detection In System Software</a>
+				<a class="banner_text2">시스템 소프트웨어 코드 클론 탐지 프로젝트</a>
+			</div>
+			<div class="banner_r">
+			</div>	  
+		</div>
+		<div class="upload_container">	
+			<form class="uploadformO" method="post" enctype="multipart/form-data">
+				<fieldset>
+					<legend>파일 업로드</legend>
+					<div id="upload_upper">
+						<div class="upper_l">
+							프로그램 1
+						</div>
+						<div class="upper_r">
+							프로그램 2
+						</div>
+					</div>
+					<div id="upload_lower">
+						<input name="file" type="file" accept=".zip">
+						<input name="file2" type="file" accept=".zip">
+					</div>
+				</fieldset>
+				<fieldset id="opt_fieldset">
+					<legend>검출 옵션</legend>
+					<div class="opt_row">
+						<div class="opt_title">프로그램 언어</div>
+						<div class="opt_body">
+							<input type="radio" name="lang" value="python" checked>
+							<label for="python">PYTHON</label>
+							<input type="radio" name="lang" value="c">
+							<label for="c">C/C++</label>	
+							<input type="radio" name="lang" value="java">
+							<label for="java">JAVA</label>	
+						</div>
+					</div>
+					<div class="opt_row">
+						<div class="opt_title">토큰종류</div>
+						<div class="opt_body">
+							<label><input type="radio" name="token" value="exact" checked>EXACT</label>
+							<label><input type="radio" name="token" value="rouch">ROUGH</label>	
+						</div>
+					</div>
+					<div class="opt_row">
+						<div class="opt_title">코드클론 검출기준</div>
+						<div class="opt_body">
+							<input type="number" name="criterion" required min=10>
+						</div>
+					</div>
+				</fieldset>
+			</form>
+		</div>
+		<div id="submit_container">
+			<button id="file_submit" type="button">
+				RUN
+			</button>
+		</div>
+		
+		<div id="result">
+			<form>
+				<fieldset>
+					<legend>검출 결과</legend>
+				<div id="result_menu">
+					<div class="active" data-target="1">Summary</div>
+					<div data-target="2">Rank</div>
+					<div data-target="3">Code Clones</div>
+				</div>
+				<div id="result_body">
+					<div id="summary">
+					</div>
+					<div id="rank">
+						<div id ="sankeyChart">	
+						</div>
+						<div id ="barChart">		
+						</div>
+						<div id ="barChart2">		
+						</div>
+					</div>
+					<div id="graph">
+						<div id ="cloneChart">		
+						</div>
+					</div>
+				</div>
+				</fieldset>
+			</form>
+		</div>
+	</content>
+	<div id="loading_container">
+      <div class="loading">
+        <div class="loading-dot"></div>
+        <div class="loading-dot"></div>
+        <div class="loading-dot"></div>
+        <div class="loading-dot"></div>
+      </div>
+  	</div>
+  	
+  	<!-- Modal HTML embedded directly into document -->
+	<div id="modalPopup" class="modal">
+		<div id="modal_list">
+		</div>
+		<div id="modalContainer">
+			<div class="modal_code">
+				<div class="modal_title">
+				</div>
+				<div class="modal_body">
+				</div>
+			</div>
+			<div class="modal_code">
+				<div class="modal_title">
+				</div>
+				<div class="modal_body">
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<footer id="footer">
+		<p>[46241] 부산광역시 금정구 부산대학로63번길 2(장전동) 부산대학교 정보컴퓨터공학 <br>
+			TEL: 051-510-1736, FAX: 051-512-1741 <br>
+		COPYRIGHT © 2019 PNU CSE &#38 Graduation Exhibition</p>
+	</footer>
+	<script>
+        let dir = "";
+        let Time;
+        let max_token, max_token_line;
+        let re_time;
+		let name1 = [];
+		let name2 = [];
+		let res;
+		var score = [];
+		var responseData;
+		var cloneData = [];
+
+        $(function () {
+            $('#file_submit').click(function (event) {
+	            event.preventDefault();
+
+				let formData = new FormData($('.uploadformO')[0]);
+
+	            $.ajax({
+	                type: 'POST',
+	                url: '/fileUpload',
+	                data: formData,
+	                contentType: false,
+	                processData: false,
+	                dataType: 'json',
+	                beforeSend: function () {
+	                   showLoading();
+	                   document.getElementById('result').style.display = 'none'; 
+	                },
+	                complete: function () {
+	                    hideLoading();
+
+	                },
+	                error: function (jqXHR, testStatus, errorThrown) {
+	                    $('.re').empty()
+	                    alert("zip 파일을 넣어 주세요!");
+	                },
+	                success: function (response) {
+	                	document.getElementById('result').style.display = 'block'; 
+						res = response;
+						console.log('response : ', response);
+						let num = 0;
+						for (i in res['sum']) {
+			        		for (j in res['sum'][i]) {
+			        			if (Object.keys(res['sum'][i][j]).length != 0)
+			        				num += 1;
+			        		}
+			        	}
+
+						document.getElementById('barChart').style.height = (num*100) + 'px';
+						document.getElementById('barChart2').style.height = (num*100) + 'px';
+						document.getElementById('sankeyChart').style.height = (num*100) + 'px';
+						document.getElementById('rank').style.display = 'block';
+						document.getElementById('graph').style.display = 'block';
+
+						loadSummary();
+						drawRank();
+						drawCloneChart();
+
+						updateResult();
+						document.getElementById('result_menu').style.display = 'flex';
+
+					} // END OF SUCCESS
+	            }); // end of ajax
+            });  // end of file submit
+        });
+
+        function loadSummary() {
+        	for (key in res) {
+        		let time = res['time'];
+        		let fileNum = res['fileNum'];
+        		let cloneNum = 0;
+        		let totalLineNum = {
+        			'src1': res['lineNum']['src1']['totalLineNum'],
+        			'src2': res['lineNum']['src2']['totalLineNum']
+        		};
+        		let avgLineNum = {
+        			'src1': totalLineNum['src1'] / fileNum['src1'],
+        			'src2': totalLineNum['src2'] / fileNum['src2']
+        		};
+        		for (i in res['score']) {
+        			for (j in res['score'][i]) { cloneNum += res['score'][i][j].length }
+        		} 
+
+        		document.getElementById('summary').innerHTML = 
+        			`프로그램1의 파일수는 <span>${fileNum['src1']}</span>개, 총 라인수는 <span>${totalLineNum['src1']}</span>, 평균 라인수는 <span>${avgLineNum['src1']}</span>입니다.<br>
+        			프로그램2의 파일수는 <span>${fileNum['src2']}</span>개, 총 라인수는 <span>${totalLineNum['src2']}</span>, 평균 라인수는 <span>${avgLineNum['src2']}</span>입니다.<br>
+        			검출된 코드 클론은 <span>${cloneNum}</span>개입니다.<br>
+        			작업수행에 총 <span>${time}</span>초 소요되었습니다.`;
+        	}
+        }
+
+        function drawRank() {
+			var barChart = echarts.init(document.getElementById('barChart'));
+			var barChart2 = echarts.init(document.getElementById('barChart2'));
+        	var barChart1Data = [];
+        	for (i in res['sum']) {
+        		for (j in res['sum'][i]) {
+        			if (Object.keys(res['sum'][i][j]).length != 0)
+        				barChart1Data.push({
+        					'name': i+' '+j,
+        					'length': res['sum'][i][j]['length'],
+        					'src1': res['sum'][i][j]['src1_lineNum'],
+        					'src2': res['sum'][i][j]['src2_lineNum'] 
+        				});
+        		}
+        	}
+        	console.log(barChart1Data);
+        	barChart1Data.sort((a,b) => {
+        		return a['length'] < b['length'] ? -1 : (a['length'] > b['length'] ? 1 : 0);  
+        	});
+        	
+        	/* BarChart 1 */
+        	var option = {};
+        	option = {
+			    title: {
+			        text: 'Rank',
+			        subtext: '토큰 길이 기준'
+			    },
+			    tooltip: {
+			        trigger: 'axis',
+			        axisPointer: {
+			            type: 'shadow'
+			        }
+			    },
+			    legend: {
+			        data: ['토큰 수']
+			    },
+			    grid: {
+			        left: '3%',
+			        right: '4%',
+			        bottom: '3%',
+			        containLabel: true
+			    },
+			    xAxis: {
+			        type: 'value',
+			        boundaryGap: [0, 0.01]
+			    },
+			    yAxis: {
+			        type: 'category',
+			        data: barChart1Data.map((i) => { return i.name })
+			    },
+			    series: [
+			        {
+			            name: '토큰 수',
+			            type: 'bar',
+			            data: barChart1Data.map((i) => { return i.length })
+			        },
+			    ]
+			};
+        	if (option && typeof option === "object") {
+        		barChart.setOption(option, true);
+        		barChart.resize();
+        	}
+        	barChart.on('click', (params) => { showList(params) });
+
+        	/*sort by src1LineNum */
+        	barChart2Data = barChart1Data;
+        	barChart2Data.sort((a,b) => {
+        		return a['src1']+a['src2'] < b['src1']+b['src2'] ? -1 : (a['src1']+a['src2'] > b['src1']+b['src2'] ? 1 : 0);  
+        	});
+
+        	/* BarChart 2 */
+        	option = {
+			    title: {
+			        text: 'Rank',
+			        subtext: '라인수 기준'
+			    },
+			    tooltip: {
+			        trigger: 'axis',
+			        axisPointer: {
+			            type: 'shadow'
+			        }
+			    },
+			    legend: {
+			        data: ['소스1 라인 수', '소스2 라인 수']
+			    },
+			    grid: {
+			        left: '3%',
+			        right: '4%',
+			        bottom: '3%',
+			        containLabel: true
+			    },
+			    xAxis: {
+			        type: 'value',
+			        boundaryGap: [0, 0.01]
+			    },
+			    yAxis: {
+			        type: 'category',
+			        data: barChart2Data.map((i) => { return i.name })
+			    },
+			    series: [
+			        {
+			            name: '소스1 라인 수',
+			            type: 'bar',
+			            data: barChart2Data.map((i) => { return i.src1 })
+			        },
+			        {
+			            name: '소스2 라인 수',
+			            type: 'bar',
+			            data: barChart2Data.map((i) => { return i.src2 })
+			        }
+			    ]
+			};
+			if (option && typeof option === "object") {
+				barChart2.setOption(option, true);
+				barChart2.resize();
+			}
+        	barChart2.on('click', (params) => { showList(params) });
+
+        	drawSankeyGraph();
+        }
+
+		function drawSankeyGraph() {
+			var sankeyChart = echarts.init(document.getElementById('sankeyChart'));
+			var option = getSankeyGraphData();
+
+			if (option && typeof option === "object") {
+				sankeyChart.setOption(option, true);
+				sankeyChart.resize();
+			}
+			else console.log("option error");
+			sankeyChart.on('click', showList);
+		}
+
+		function getSankeyGraphData() {
+			var option = {
+			    series: {
+			        type: 'sankey',
+			        layout:'none',
+			        focusNodeAdjacency: 'allEdges',
+			        data: [],
+			        links: []
+			    }
+			};
+			let temp = []
+			
+			for( i in res['sum']) {
+				for( j in res['sum'][i]) {
+					if( res['sum'][i][j]['src1_lineNum'] != undefined) {
+						if (temp.includes(i) == false) temp.push(i);
+						if (temp.includes(j) == false) temp.push(j);
+						option['series']['links'].push({source: i, target: j, value: res['sum'][i][j]['src1_lineNum']});
+						score.push(res['sum'][i][j]['src1_lineNum']);
+					}
+				}
+			}
+			temp.forEach((i) => { option['series']['data'].push({name: i}) });
+
+			return option;
+			
+			// for (i in res['score']) {
+			// 	for (j in res['score'][i]) {
+			// 		if (res['score'][i][j].length > 0) {
+			// 			if (temp.includes(i) == false) temp.push(i);
+			// 			if (temp.includes(j) == false) temp.push(j);
+			// 			res['score'][i][j].forEach((elem) => {
+			// 				option['series']['links'].push({source: i, target: j, value: elem.length});
+			// 				score.push({
+			// 					'src1': i,
+			// 					'src2': j,
+			// 					'src1_lineEnd': elem['src1_lineEnd'],
+			// 					'src1_lineStart': elem['src1_lineStart'],
+			// 					'src2_lineEnd': elem['src2_lineEnd'],
+			// 					'src2_lineStart': elem['src2_lineStart']
+			// 				});
+			// 			});
+			// 		}
+			// 	}
+			// }
+			// temp.forEach((i) => { option['series']['data'].push({name: i}) });
+			// console.log(option);
+			// return option;
+		}
+
+		function updateResult() {
+			Array.from(document.getElementById('result_menu').children).forEach((i) => {
+				if(i.classList.contains('active') == true) revealResult(i.dataset.target);
+				else hideResult(i.dataset.target);
+			});
+		}
+
+		function drawCloneChart() {
+			var n = 0;
+			cloneData = [];
+			for (i in res['score']) {
+        		for (j in res['score'][i]) {
+        			if (res['score'][i][j].length > 0) {
+        				n += res['score'][i][j].length;
+        				res['score'][i][j].forEach((e) => {
+        					cloneData.push({
+        						'src1': i,
+        						'src2': j,
+        						'length': e.length,
+        						'src1_lineStart': e.src1_lineStart,
+        						'src2_lineStart': e.src2_lineStart,
+        						'src1_lineEnd': e.src1_lineEnd,
+        						'src2_lineEnd': e.src2_lineEnd,
+        					})
+        				});
+        			}	
+        		}
+        	}
+        	document.getElementById('cloneChart').style.height = (50+n*60) + 'px';
+			var cloneChart = echarts.init(document.getElementById('cloneChart'));
+        	cloneData.sort((a,b) => {
+        		return a['length'] < b['length'] ? -1 : (a['length'] > b['length'] ? 1 : 0);  
+        	});
+        	console.log(cloneData);
+        	var option = {
+			    title: {
+			        text: 'Code Clones',
+			        subtext: '코드클론 길이 순'
+			    },
+			    tooltip: {
+			        trigger: 'axis',
+			        axisPointer: {
+			            type: 'shadow'
+			        }
+			    },
+			    legend: {
+			        data: ['소스1 라인 수']
+			    },
+			    grid: {
+			        left: '3%',
+			        right: '4%',
+			        bottom: '3%',
+			        containLabel: true
+			    },
+			    xAxis: {
+			        type: 'value',
+			        boundaryGap: [0, 0.01]
+			    },
+			    yAxis: {
+			        type: 'category',
+			        data: cloneData.map((i) => { return (i.src1+' '+i.src2) })
+			    },
+			    series: [
+			        {
+			            name: '토큰 길이',
+			            type: 'bar',
+			            data: cloneData.map((i) => { return i.length })
+			        }
+			    ]
+			};
+			if (option && typeof option === "object") {
+				cloneChart.setOption(option, true);
+				cloneChart.resize();
+			}
+        	cloneChart.on('click', (params) => { showCodeWithHL(params) });
+		}
+
+		function showList(params) {
+			modalClear();
+			var src1, src2;
+			if(params.componentSubType == 'bar') {
+				src1 = params.name.split(' ')[0];
+				src2 = params.name.split(' ')[1];
+			}
+			else if(params.dataType == 'edge') {
+				src1 = params.data.source;
+				src2 = params.data.target;
+			}
+			var data = res['score'][src1][src2]; //data is array!
+			var rows = []
+			rows.push(`<div class="modal_list_row">
+						<div>line start</div>
+						<div>line end</div>
+						<div>line start</div>
+						<div>line end</div>
+						<div>length</div>
+						<div></div>
+					</div>`);
+			data.forEach((i) => {
+				rows.push(
+					`<div class="modal_list_row">
+						<div>${i.src1_lineStart}</div>
+						<div>${i.src1_lineEnd}</div>
+						<div>${i.src2_lineStart}</div>
+						<div>${i.src2_lineEnd}</div>
+						<div>${i.length}</div>
+						<div onclick="viewCode('${src1}','${src2}',${i.src1_lineStart},${i.src1_lineEnd},${i.src2_lineStart},${i.src2_lineEnd})"><span>view</span></div>
+					</div>`
+				);
+			});
+			rows = rows.join('');
+			console.log(rows);
+			var disply = `
+			<div id="modal_list_title">
+				<div>${src1}</div>
+				<div>${src2}</div>
+				<div></div>
+			</div>
+			<div id="modal_list_body">
+				${rows}
+			</div>
+			`;
+
+			document.getElementById('modal_list').innerHTML = disply;
+			$('#modalPopup').modal();
+		}
+
+		async function viewCode(src1,src2,src1_lineStart,src1_lineEnd,src2_lineStart,src2_lineEnd) {
+			var code1, code2;
+			code1 = await loadCode(src1);
+			code2 = await loadCode(src2);
+
+			code1 = code1.replace(/</gi, '&lt;');
+			code1 = code1.replace(/>/gi, '&gt;');
+			code2 = code2.replace(/</gi, '&lt;');
+			code2 = code2.replace(/>/gi, '&gt;');
+
+			code1 = code1.split('\n').map((i, idx) => {
+				return `${(idx >= src1_lineStart-1 && idx <= src1_lineEnd-1) ? '<pre class="hl">' : '<pre>'}${i}</pre>`
+			});
+			code2 = code2.split('\n').map((i, idx) => {
+				return `${(idx >= src2_lineStart-1 && idx <= src2_lineEnd-1) ? '<pre class="hl">' : '<pre>'}${i}</pre>`
+			});
+			document.getElementsByClassName('modal_body')[0].innerHTML = code1.join('');
+			document.getElementsByClassName('modal_body')[1].innerHTML = code2.join('');
+		}
+
+		async function showCode(params) {
+			modalClear();
+			var code1, code2;
+			if(params.componentSubType == 'bar') {
+				code1 = await loadCode(params.name.split(' ')[0]);
+				code2 = await loadCode(params.name.split(' ')[1]);
+			}
+			else if(params.dataType == 'edge') {
+				code1 = await loadCode(params.data.source);
+				code2 = await loadCode(params.data.target);
+			}
+			else {
+				return;
+			}
+			code1 = code1.replace(/</gi, '&lt;');
+			code1 = code1.replace(/>/gi, '&gt;');
+			code2 = code2.replace(/</gi, '&lt;');
+			code2 = code2.replace(/>/gi, '&gt;');
+
+			document.getElementsByClassName('modal_body')[0].innerHTML = `<pre><code>${code1}</code></pre>`;
+			document.getElementsByClassName('modal_body')[1].innerHTML = `<pre><code>${code2}</code></pre>`;
+			$('#modalPopup').modal();
+		}
+
+		async function showCodeWithHL(params) {
+			modalClear();
+			var code1, code2;
+			if(params.componentSubType == 'bar') {
+				code1 = await loadCode(params.name.split(' ')[0]);
+				code2 = await loadCode(params.name.split(' ')[1]);
+			}
+			else if(params.dataType == 'edge') {
+				code1 = await loadCode(params.data.source);
+				code2 = await loadCode(params.data.target);
+			}
+			else {
+				return;
+			}
+			code1 = code1.replace(/</gi, '&lt;');
+			code1 = code1.replace(/>/gi, '&gt;');
+			code2 = code2.replace(/</gi, '&lt;');
+			code2 = code2.replace(/>/gi, '&gt;');
+
+			var c = cloneData[params.dataIndex];
+			code1 = code1.split('\n').map((i, idx) => {
+				return `${(idx >= c.src1_lineStart-1 && idx <= c.src1_lineEnd-1) ? '<pre class="hl">' : '<pre>'}${i}</pre>`
+			});
+			code2 = code2.split('\n').map((i, idx) => {
+				return `${(idx >= c.src2_lineStart-1 && idx <= c.src2_lineEnd-1) ? '<pre class="hl">' : '<pre>'}${i}</pre>`
+			});
+			document.getElementsByClassName('modal_body')[0].innerHTML = code1.join('');
+			document.getElementsByClassName('modal_body')[1].innerHTML = code2.join('');
+			$('#modalPopup').modal();
+		}
+
+		function loadCode(path) {
+			return fetch(`http://localhost:3005/show_code?src1=${path}`, {
+		      headers : { 
+		        "Content-Type": "text/plain",
+		        'Accept': 'text/plain'
+		       }
+		    })
+			.then((response)=> {
+				return response.text();
+			})
+			.catch((err) => console.log(err));
+		}
+
+		function modalClear() {
+			document.getElementById('modalPopup').innerHTML = `
+			<div id="modal_list">
+			</div>
+			<div id="modalContainer">
+				<div class="modal_code">
+					<div class="modal_title">
+					</div>
+					<div class="modal_body">
+					</div>
+				</div>
+				<div class="modal_code">
+					<div class="modal_title">
+					</div>
+					<div class="modal_body">
+					</div>
+				</div>
+			</div>`;
+		}
+
+    </script>
+    <script>
+    	var resultMenues = Array.from(document.getElementById('result_menu').children);
+    	
+    	function changeResult() {
+    		if (this.classList.contains('active') == true) return;
+    		resultMenues.forEach((i) => {
+    			if (i.classList.contains('active') == true) {
+    				i.classList.remove('active');
+    				hideResult(i.dataset.target);
+    			}
+    		});
+			this.classList.add('active');
+			revealResult(this.dataset.target);
+    	}
+
+    	function revealResult(target){
+    		if (target == "1") document.getElementById('summary').style.display = 'block';
+    		else if (target == "2") document.getElementById('rank').style.display = 'block';
+    		else if (target == "3") document.getElementById('graph').style.display = 'block';
+    	}
+
+    	function hideResult(target) {
+    		if (target == "1") document.getElementById('summary').style.display = 'none';
+    		else if (target == "2") document.getElementById('rank').style.display = 'none';
+    		else if (target == "3") document.getElementById('graph').style.display = 'none';
+    	}
+
+    	resultMenues.forEach((i) => { i.addEventListener('click', changeResult) });
+    </script>
+    <script>
+    	var loading = document.getElementById('loading_container');
+    	function showLoading() {
+	        loading.style.display = 'initial';
+	      }
+
+	      function hideLoading() {
+	        loading.style.display = 'none';
+	      }
+    </script>	
+</body>
+</html>

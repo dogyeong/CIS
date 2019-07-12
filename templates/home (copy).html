@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang= "ko" >
+<head>
+	
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+	
+	<title>CIS</title>
+
+	
+	<link href="../static/css/basic.css" rel="stylesheet">	
+ 	<script src="../static/js/jquery.min.js"></script>
+
+	<script type="text/javascript" src="http://echarts.baidu.com/gallery/vendors/echarts/echarts.min.js"></script>
+	
+
+    	<script>
+
+        let dir = "";
+        let Time;
+        let max_token, max_token_line;
+        let re_time;
+	let name1 = [];
+	let name2 = [];
+	let bar = [];
+	let val = [];
+	let fn1=0, fn2=0, cnt=0;
+	let res;
+        $(function () {
+
+            $('#file_submit').click(function (event) {
+		console.log("test");
+                event.preventDefault();
+
+		let formData = new FormData($('.uploadformO')[0]);
+
+                $.ajax({
+                    type: 'POST',
+                    url: '/fileUpload',
+                    data: formData,
+                    contentType: false,
+                    processData: false,
+                    dataType: 'json',
+                    beforeSend: function () {
+                        $('.re').empty();
+                        $('.loader').removeClass('display-node');
+                    },
+                    complete: function () {
+                        $('.loader').addClass('display-node');
+                    },
+                    error: function (jqXHR, testStatus, errorThrown) {
+                        $('.re').empty()
+                        alert("zip 파일을 넣어 주세요!")
+                    },
+                    success: function (response) {
+			res = response
+			console.log('response : ', response)
+
+			for(key in response['lineNum']) {
+					console.log('name : ', key)
+					bar.push(key)
+					console.log('bar : ', bar)
+
+			}
+
+ 			$('.buttonclass').empty();
+
+                        let button_html = `
+                        <button type="button" id="result_btn"  style="margin: auto; text-align: center; line-height: 10px; height:50px;width:110px; color:#333">결과</button>
+                        <button type="button" id="table_btn"  style="margin: auto; text-align: center; line-height: 10px; height:50px;width:110px; color:#333">테이블</button>
+                        <button type="button" id="graph_btn"  style="margin: auto; text-align: center; line-height: 10px; height:50px;width:110px; color:#333">그래프</button>
+
+
+			<br><br><br>
+			<p text-align: center;>Data #01</p>
+			<p text-align: center;>NAME : data_A	&nbsp&nbsp|&nbsp&nbsp Total Line Number : 447</p>
+			<br><br>
+			<p text-align: center;>Data #02</p>
+			<p text-align: center;>NAME : data_B	&nbsp&nbsp|&nbsp&nbsp Total Line Number : 256</p>
+
+			<br><br><br>
+			<p text-align: center;>전체 유사도</p>
+			`;
+
+
+
+			$('.buttonclass').append(button_html);
+                        $('.re').empty();
+   			var barChart = echarts.init(document.getElementById('barChart'));
+			option = {
+			    title : {
+				text: '世界人口总量',
+				subtext: '数据来自网络'
+			    },
+			    tooltip : {
+				trigger: 'axis'
+			    },
+			    legend: {
+				data:['2011年', '2012年']
+			    },
+			    toolbox: {
+				show : true,
+				feature : {
+				    mark : {show: true},
+				    dataView : {show: true, readOnly: false},
+				    magicType: {show: true, type: ['line', 'bar']},
+				    restore : {show: true},
+				    saveAsImage : {show: true}
+				}
+			    },
+			    calculable : true,
+			    xAxis : [
+				{
+				    type : 'value',
+				    boundaryGap : [0, 0.01]
+				}
+			    ],
+			    yAxis : [
+				{
+				    type : 'category',
+				    data : ['巴西','印尼','美国','印度','中国','世界人口(万)']
+				}
+			    ],
+			    series : [
+				{
+				    name:'2011年',
+				    type:'bar',
+				    data:[18203, 23489, 29034, 104970, 131744, 630230]
+				},
+				{
+				    name:'2012年',
+				    type:'bar',
+				    data:[19325, 23438, 31000, 121594, 134141, 681807]
+				}
+			    ]
+				};
+			var data = [];
+			var arr1 = [];
+			var arr2 = [];
+			for( i in res['sum']) {
+				for( j in res['sum'][i]) {
+					if ( res['sum'][i][j]['src1_lineNum'] != undefined) {
+				    		//data.push(i.split('/')[i.split('/').length-1] + '-' + j.split('/')[j.split('/').length-1]);
+						data.push(i + '-' + j);
+						arr1.push(res['sum'][i][j]['src1_lineNum']);
+						arr2.push(res['sum'][i][j]['length']);    
+					}
+					//console.log(i, j, res['sum'][i][j]['src1_lineNum'])
+			    	}
+			}
+			var o = [{
+				type : 'category',
+				data : data
+			}]
+			option['yAxis'] = o;
+			option['series'][0]['data'] = arr1;
+			option['series'][1]['data'] = arr2;
+			if (option && typeof option === "object") {
+			    barChart.setOption(option, true);
+			}
+
+                } // END OF SUCCESS
+                });
+            });  // end of file submit
+
+        });
+		
+    </script>
+</head>
+
+<body>
+	<header id="header">
+		   <div class = "title">
+				<a class="logo_img" href="#"><img src="../static/images/logo.png" width="40"> </a>
+			   <p class="logo_text">C&nbspI&nbspS</p>
+		   </div>
+		   <div id="menu_bar">
+			   <a class="menu01" href="#"><span>CIS</span></a>
+			   <a class="menu02" href="#"><span>프로젝트소개</span></a>
+			   <a class="menu03" href="#"><span>람쥐썬더</span></a>
+			   
+		   </div>
+	</header>
+	
+		<content id="contents">
+ 			<hr>
+			<br>
+			
+			<div class = "banner">
+			  <div class="banner_l">
+					<a class="banner_text">Code Clone Detection In System Software</a>
+				  	<a class="banner_text2">시스템 소프트웨어 코드 클론 탐지 프로젝트</a>
+				</div>
+				  
+			<div class="banner_r">
+			</div>
+				    
+				  
+		   </div>
+
+			<div class="container">	
+				<br>
+				<hr>
+				<div class="containerL">
+					<a>Original Code</a>
+					<hr>
+					<form class="uploadformO" method="post" enctype="multipart/form-data">
+					<input name="file" type="file" accept=".zip" style="width: 80%; color:#000000; background-color: #ffffff; opacity:0.8;">
+					<br><br><br>
+							<label><input type="radio" name="token" value="rich" checked>RICH</label>
+							<label><input type="radio" name="token" value="small">SMALL</label>					
+						
+					
+							<label><input type="radio" name="adaptive" value="on" checked>ON</label>
+							<label><input type="radio" name="adaptive" value="off">OFF</label>
+
+					<input name="file2" type="file" accept=".zip" style="width: 80%; color:#000000; background-color: #ffffff; opacity:0.8;">
+					<br><br><br>
+							<label><input type="radio" name="token" value="rich" checked>RICH</label>
+							<label><input type="radio" name="token" value="small">SMALL</label>					
+						
+					
+							<label><input type="radio" name="adaptive" value="on" checked>ON</label>
+							<label><input type="radio" name="adaptive" value="off">OFF</label>		
+					</form>
+				</div>
+				
+				<div class="containerR">
+					<a>Testing Code</a>
+					<hr>
+					<form class="uploadformO" method="post" enctype="multipart/form-data">			
+					</form>
+				</div>
+			</div>
+
+				<button id="file_submit" type="button" style="border-color:black; background-color:white; color:black">RUN
+				</button>
+
+				<div class = "result">		
+							
+						<div class="btn-group btn-lg">
+							<div class="buttonclass" id="buttonclass">
+							</div>
+						</div>
+
+						<div class="loader display-node">							
+						</div>
+					
+						<div class="re" id="div1">
+						</div>
+				</div>
+			<br><br>
+		</content>
+				<div style="height : 1000px">
+				<div id ="barChart" style="height: 100%">			
+				</div>
+				<div id ="echarts" style="height: 50%">			
+				</div>
+
+				</div>
+				<script>
+/*	
+					var myChart = echarts.init(document.getElementById('echarts'));
+
+					option = null;
+					option = {
+					    title  : { text: '학업성취결과'},
+					    tooltip: { trigger: 'axis'},
+					    legend : { data:['서울', '수원', '대전', '광주', '부산'] },
+					    grid   : { left:'3%', right:'4%', bottom:    '3%', containLabel:true},
+					    toolbox: { feature: { saveAsImage: { } } },
+					    xAxis: { 
+						type: 'category', boundaryGap: false,
+						data: ['1등급','2등급','3등급','4등급','5등급','6등급','7등급']
+					    },
+					    yAxis: { type: 'value' },
+					    series: [
+						{ name : '서울', type : 'line', stack : '总量', //누적값
+						  data : [120, 132, 101, 134, 90, 230, 210] },
+						{ name : '수원', type : 'line', stack : '总量',
+						  data : [220, 182, 191, 234, 290, 330, 310] },
+						{ name : '대전', type : 'line', stack : '总量',
+						  data : [150, 232, 201, 154, 190, 330, 410] },
+						{ name : '광주', type : 'line',  // stack: '总量',
+						  data : [320, 332, 301, 334, 390, 330, 320] },
+						{ name : '부산', type : 'line',
+						  data : [820, 932, 901, 934, 1290, 1330, 1320] }, ] }; ;
+
+					if (option && typeof option === "object") {
+					    myChart.setOption(option, true); }
+*/
+				</script>
+
+		<footer id="footer">
+     	 <p>[46241] 부산광역시 금정구 부산대학로63번길 2(장전동) 부산대학교 정보컴퓨터공학 <br>
+      	   TEL: 051-510-1736, FAX: 051-512-1741 <br>
+     	    COPYRIGHT © 2019 PNU CSE &#38 Graduation Exhibition</p>
+		</footer>	
+
+
+</body>
+	
+</html>
